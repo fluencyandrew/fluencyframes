@@ -7,16 +7,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.");
 }
 
-type CookieReader = {
-  get: (name: string) => { value: string } | undefined;
-};
-
-export function createServerSupabaseClient(cookies: CookieReader) {
+export function createServerSupabaseClient(
+  cookies: ReadonlyRequestCookies | Promise<ReadonlyRequestCookies>
+) {
   return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get: (name: string) => cookies.get(name)?.value ?? null,
-      set: () => undefined,
-      remove: () => undefined,
+      getAll: async () => {
+        const cookieStore = await cookies;
+        return cookieStore.getAll().map((cookie) => ({
+          name: cookie.name,
+          value: cookie.value,
+        }));
+      },
     },
   });
 }
