@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         (await cookieStore.getAll()).map((cookie) => ({ name: cookie.name, value: cookie.value })),
       setAll: (cookieList) => {
         cookieList.forEach((cookie) => {
-          response.cookies.set(cookie.name, cookie.value, cookie.options as any);
+          response.cookies.set(cookie.name, cookie.value, cookie.options);
         });
       },
     },
