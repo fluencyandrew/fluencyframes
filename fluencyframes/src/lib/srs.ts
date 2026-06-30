@@ -155,7 +155,7 @@ export function buildSessionQueue(
         Math.max(0, now.getTime() - nextDue.getTime())
       )
     })
-    .filter((exercise): exercise is Exercise => Boolean(exercise) && !sessionQueue.some((e) => e.word.id === exercise.word.id))
+    .filter((exercise): exercise is Exercise => Boolean(exercise) && !sessionQueue.some((e) => e.word.id === exercise!.word.id))
     .sort(compareNextDueAsc)
 
   const fallbackExercises = upcomingExercises.slice(0, 25 - sessionQueue.length)

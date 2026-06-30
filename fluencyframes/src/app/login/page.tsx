@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabase";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams?.get("redirect") ?? "/session";
+  const redirectTo = searchParams?.get("redirect") ?? "/app/session";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

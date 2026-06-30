@@ -454,6 +454,9 @@ svg.conn { position: absolute; top:0; left:0; width:100%; height:100%; pointer-e
                   <div className="ctag verb lit">address the {currentExercise.targetWord}</div>
                 </>
               ) : null}
+              {currentExercise?.passiveWordIds?.length ? (
+                <div className="ctag noun lit">passive: {currentExercise.passiveWordIds.join(", ")}</div>
+              ) : null}
             </div>
             <div className="node-legend">
               <div className="nl-item"><div className="nl-swatch anchor" />known word</div>

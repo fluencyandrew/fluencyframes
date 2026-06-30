@@ -1,24 +1,8 @@
 import { createServerClient } from "@supabase/auth-helpers-nextjs";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_FILE = /\.(.*)$/;
-const ALLOWED_PATHS = ["/login", "/signup", "/callback", "/api"];
-
-function shouldBypass(pathname: string) {
-  return (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/static") ||
-    pathname.startsWith("/public") ||
-    ALLOWED_PATHS.some(
-      (allowedPath) =>
-        pathname === allowedPath || pathname.startsWith(`${allowedPath}/`)
-    ) ||
-    PUBLIC_FILE.test(pathname)
-  );
-}
-
 export async function middleware(request: NextRequest) {
-  if (shouldBypass(request.nextUrl.pathname)) {
+  if (!request.nextUrl.pathname.startsWith("/app")) {
     return NextResponse.next();
   }
 
@@ -41,7 +25,7 @@ export async function middleware(request: NextRequest) {
   if (!session) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    redirectUrl.search = `redirect=${encodeURIComponent(request.nextUrl.pathname)}`;
+    redirectUrl.search = `redirect=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`;
     return NextResponse.redirect(redirectUrl);
   }
 
@@ -49,5 +33,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|signup|callback|api|_next|static|favicon.ico).*)"],
+  matcher: ["/app/:path*"],
 };

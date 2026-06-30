@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Groundwork from "../../../components/Groundwork";
 import { createServerSupabaseClient } from "../../../lib/supabase/server";
 import ExerciseShell from "./ExerciseShell";
 
@@ -99,6 +100,81 @@ export default async function SessionPage() {
   const dialogueTurns = dialogueTurnsResult.data ?? [];
   const exercises = (exercisesResult.data ?? []) as ExerciseRow[];
 
+  const exerciseWordIds = exercises
+    .map((exercise) => exercise.word_id)
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+  const groundworkItemsResult = await supabase
+    .from("groundwork_items")
+    .select(`
+      id,
+      word_id,
+      image_url,
+      bridge_sentence,
+      words!word_id(id, text),
+      distractor_ids
+    `)
+    .eq("needs_groundwork", true)
+    .in("word_id", exerciseWordIds)
+    .returns<any[]>();
+
+  if (groundworkItemsResult.error) {
+    throw new Error(groundworkItemsResult.error.message);
+  }
+
+  const groundworkItems = (groundworkItemsResult.data ?? []) as Array<{
+    id: number;
+    word_id: number;
+    image_url: string | null;
+    bridge_sentence: string | null;
+    words?: { id: number; text: string | null } | null;
+    distractor_ids?: number[] | null;
+  }>;
+
+  const { data: completedGroundworkRows, error: completedGroundworkError } = await supabase
+    .from("user_groundwork_log")
+    .select("word_id")
+    .eq("user_id", userId)
+    .in("word_id", exerciseWordIds);
+
+  if (completedGroundworkError) {
+    throw new Error(completedGroundworkError.message);
+  }
+
+  const completedGroundworkWordIds = new Set((completedGroundworkRows ?? []).map((row) => row.word_id));
+
+  const filteredGroundworkItems = await Promise.all(
+    groundworkItems
+      .filter((item) => !completedGroundworkWordIds.has(item.word_id))
+      .map(async (item) => {
+        const distractorIds = (item.distractor_ids ?? []).filter((value): value is number => typeof value === "number");
+        let distractorWords: Array<{ id: number; text: string | null }> = [];
+
+        if (distractorIds.length > 0) {
+          const { data: distractorRows, error: distractorError } = await supabase
+            .from("words")
+            .select("id, text")
+            .in("id", distractorIds)
+            .returns<Array<{ id: number; text: string | null }>>();
+
+          if (distractorError) {
+            throw new Error(distractorError.message);
+          }
+
+          distractorWords = distractorRows ?? [];
+        }
+
+        return {
+          id: item.id,
+          word_id: item.word_id,
+          image_url: item.image_url,
+          bridge_sentence: item.bridge_sentence,
+          word: item.words ?? null,
+          distractor_words: distractorWords,
+        };
+      })
+  );
+
   const exercisesWithOptions = await Promise.all(
     exercises.map(async (exercise) => {
       const optionWordIds = (exercise.option_word_ids ?? [])
@@ -131,12 +207,14 @@ export default async function SessionPage() {
   );
 
   return (
-    <ExerciseShell
-      session={session}
-      profile={profile}
-      situation={situation}
-      dialogueTurns={dialogueTurns}
-      exercises={exercisesWithOptions}
-    />
+    <Groundwork items={filteredGroundworkItems}>
+      <ExerciseShell
+        session={session}
+        profile={profile}
+        situation={situation}
+        dialogueTurns={dialogueTurns}
+        exercises={exercisesWithOptions}
+      />
+    </Groundwork>
   );
 }
